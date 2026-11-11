@@ -18,22 +18,22 @@ db.exec(`
     title       TEXT NOT NULL,
     description TEXT DEFAULT '',
     questions   TEXT NOT NULL,
-    external_id TEXT DEFAULT NULL,  -- id форми з Typeform або Google Forms
+    external_id TEXT DEFAULT NULL,
     created_at  TEXT DEFAULT (datetime('now'))
   );
 
   -- Відповіді респондентів
-  -- ВАЖЛИВО: email тут ВІДСУТНІЙ — лише хеш для контролю унікальності
   CREATE TABLE IF NOT EXISTS responses (
     id           TEXT PRIMARY KEY,
     survey_id    TEXT NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
     answers      TEXT NOT NULL,
     voter_hash   TEXT NOT NULL,
+    user_id      TEXT DEFAULT NULL,
+    source       TEXT DEFAULT 'site',
     submitted_at TEXT DEFAULT (datetime('now'))
   );
 
   -- Використані хеші для блокування повторного проходження
-  -- PRIMARY KEY (hash, survey_id) — один і той самий email може пройти різні опитування
   CREATE TABLE IF NOT EXISTS used_hashes (
     hash       TEXT NOT NULL,
     survey_id  TEXT NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
@@ -41,5 +41,13 @@ db.exec(`
     PRIMARY KEY (hash, survey_id)
   );
 `);
+
+const responseColumns = db.prepare('PRAGMA table_info(responses)').all();
+if (!responseColumns.some(col => col.name === 'user_id')) {
+  db.exec('ALTER TABLE responses ADD COLUMN user_id TEXT DEFAULT NULL;');
+}
+if (!responseColumns.some(col => col.name === 'source')) {
+  db.exec('ALTER TABLE responses ADD COLUMN source TEXT DEFAULT "site";');
+}
 
 module.exports = db;

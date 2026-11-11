@@ -1,9 +1,14 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db/database');
+const { requireAuth, requireAdmin } = require('../middleware/auth');
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function serializeRows(rows) {
+  return rows.map(r => ({ ...r, answers: JSON.parse(r.answers) }));
 }
 
 // POST /api/responses — надіслати відповідь
@@ -24,11 +29,13 @@ router.post('/', (req, res) => {
   if (alreadyUsed)
     return res.status(409).json({ error: 'Ця пошта вже використовувалась для цього опитування' });
 
+  const userId = req.session && req.session.user ? req.session.user.id : null;
+
   // Транзакція: відповідь + хеш зберігаються разом або не зберігаються взагалі
   db.transaction(() => {
     db.prepare(
-      'INSERT INTO responses (id, survey_id, answers, voter_hash, source) VALUES (?, ?, ?, ?, ?)'
-    ).run(genId(), surveyId, JSON.stringify(answers), voterHash, 'site');
+      'INSERT INTO responses (id, survey_id, answers, voter_hash, user_id, source) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(genId(), surveyId, JSON.stringify(answers), voterHash, userId, 'site');
 
     db.prepare(
       'INSERT INTO used_hashes (hash, survey_id) VALUES (?, ?)'
@@ -39,15 +46,27 @@ router.post('/', (req, res) => {
 });
 
 // GET /api/responses/:surveyId — результати (voter_hash НЕ передається)
-router.get('/:surveyId', (req, res) => {
+router.get('/:surveyId', requireAdmin, (req, res) => {
   const rows = db.prepare(`
-    SELECT id, answers, submitted_at
+    SELECT id, answers, submitted_at, user_id
     FROM responses
     WHERE survey_id = ?
     ORDER BY submitted_at ASC
   `).all(req.params.surveyId);
 
-  res.json(rows.map(r => ({ ...r, answers: JSON.parse(r.answers) })));
+  res.json(serializeRows(rows));
+});
+
+// GET /api/responses/me/:surveyId — результати для поточного користувача
+router.get('/me/:surveyId', requireAuth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT id, answers, submitted_at
+    FROM responses
+    WHERE survey_id = ? AND user_id = ?
+    ORDER BY submitted_at ASC
+  `).all(req.params.surveyId, req.session.user.id);
+
+  res.json(serializeRows(rows));
 });
 
 module.exports = router;

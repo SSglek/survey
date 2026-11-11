@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db/database');
+const { requireAdmin } = require('../middleware/auth');
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -28,7 +29,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/surveys — створити
-router.post('/', (req, res) => {
+router.post('/', requireAdmin, (req, res) => {
   const { title, description, questions } = req.body;
   if (!title || !Array.isArray(questions) || questions.length === 0)
     return res.status(400).json({ error: 'Невірні дані' });
@@ -41,7 +42,7 @@ router.post('/', (req, res) => {
 });
 
 // PUT /api/surveys/:id — оновити
-router.put('/:id', (req, res) => {
+router.put('/:id', requireAdmin, (req, res) => {
   const { title, description, questions } = req.body;
   const exists = db.prepare('SELECT id FROM surveys WHERE id = ?').get(req.params.id);
   if (!exists) return res.status(404).json({ error: 'Не знайдено' });
@@ -53,7 +54,7 @@ router.put('/:id', (req, res) => {
 });
 
 // DELETE /api/surveys/:id — видалити (каскадно прибирає responses і used_hashes)
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM surveys WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });

@@ -1,20 +1,35 @@
 const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
+const cors = require('cors');
+const path = require('path');
+const session = require('express-session');
+require('dotenv').config();
 
 // Ініціалізуємо БД (створює таблиці, якщо не існують)
 require('./db/database');
 
-const app  = express();
-const PORT = 3000;
+const app = express();
+const PORT = Number(process.env.PORT || 3000);
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'survey-secret-key',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: 'lax',
+    maxAge: 24 * 60 * 60 * 1000
+  }
+}));
 
 // Статика фронтенду
 app.use(express.static(path.join(__dirname, 'public')));
 
 // API-маршрути
+app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/surveys',   require('./routes/surveys'));
 app.use('/api/responses', require('./routes/responses'));
 app.use('/api/verify',    require('./routes/verify'));
@@ -29,32 +44,6 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`\n Сервер запущено: http://localhost:${PORT}\n`);
 });
-const session = require('express-session');
-require('dotenv').config();
-
-// 1. Підключаємо сесії (додати перед маршрутами API)
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 } // 24 години
-}));
-
-// Middleware перевірки прав адміна
-function requireAdmin(req, res, next) {
-  if (req.session && req.session.isAdmin) {
-    return next();
-  }
-  return res.status(403).json({ error: 'Доступ заборонено. Потрібні права адміністратора.' });
-}
-
-// 2. Підключаємо маршрути авторизації
-app.use('/api/auth', require('./routes/auth'));
-
-// 3. Захищаємо критичні маршрути (створення/видалення)
-// Приклад у routes/surveys.js:
-// router.post('/', requireAdmin, ...);
-// router.delete('/:id', requireAdmin, ...);
 
 /*
 1. cd D:\survey-prototype-v2\survey-prototype

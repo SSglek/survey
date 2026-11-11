@@ -1,74 +1,111 @@
-const Auth = (() => {
-  async function check() {
-    try {
-      const res = await fetch('/api/auth/status');
-      const data = await res.json();
-      updateUI(data.isAdmin);
-    } catch (e) {
-      updateUI(false);
-    }
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const router = express.Router();
+
+const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || 'admin').trim();
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+
+const users = [
+  {
+    id: 'admin-1',
+    username: ADMIN_USERNAME,
+    passwordHash: bcrypt.hashSync(ADMIN_PASSWORD, 10),
+    role: 'admin'
+  }
+];
+
+function getUserByUsername(username) {
+  const normalized = String(username || '').trim().toLowerCase();
+  return users.find(user => user.username.toLowerCase() === normalized);
+}
+
+router.get('/status', (req, res) => {
+  const user = req.session?.user || null;
+
+  res.json({
+    ok: true,
+    isAdmin: !!(user && user.role === 'admin'),
+    isAuthenticated: !!user,
+    user: user ? { username: user.username, role: user.role } : null
+  });
+});
+
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body || {};
+
+  if (!username || !password) {
+    return res.status(400).json({ ok: false, message: 'Потрібні логін і пароль.' });
   }
 
-  function updateUI(isAdmin) {
-    // Ховаємо або показуємо кнопку "Конструктор"
-    const createBtn = document.querySelector('[data-view="create"]');
-    if (createBtn) createBtn.style.display = isAdmin ? 'inline-block' : 'none';
-
-    // Ховаємо/показуємо кнопки "Увійти" та "Вийти"
-    const loginBtn = document.getElementById('btn-login-view');
-    const logoutBtn = document.getElementById('btn-logout');
-    if (loginBtn) loginBtn.style.display = isAdmin ? 'none' : 'inline-block';
-    if (logoutBtn) logoutBtn.style.display = isAdmin ? 'inline-block' : 'none';
-
-    // Ховаємо кнопки Редагувати/Видалити для звичайних користувачів
-    document.querySelectorAll('[data-action="edit"], [data-action="delete"]').forEach(btn => {
-      btn.style.display = isAdmin ? 'inline-block' : 'none';
-    });
+  const user = getUserByUsername(username);
+  if (!user) {
+    return res.status(401).json({ ok: false, message: 'Невірний логін або пароль.' });
   }
 
-  async function login(username, password) {
-    const errEl = document.getElementById('login-error');
-    if (errEl) errEl.textContent = '';
-
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-
-      if (data.ok) {
-        await check();
-        App.showView('list');
-      } else {
-        if (errEl) errEl.textContent = data.message || 'Помилка входу';
-      }
-    } catch (err) {
-      if (errEl) errEl.textContent = 'Помилка сервера: ' + err.message;
-    }
+  const passwordMatches = await bcrypt.compare(String(password), user.passwordHash);
+  if (!passwordMatches) {
+    return res.status(401).json({ ok: false, message: 'Невірний логін або пароль.' });
   }
 
-  async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    await check();
-    App.showView('home');
+  req.session.user = {
+    id: user.id,
+    username: user.username,
+    role: user.role
+  };
+
+  return res.json({
+    ok: true,
+    user: { username: user.username, role: user.role },
+    message: 'Вхід виконано.'
+  });
+});
+
+router.post('/register', async (req, res) => {
+  const { username, password } = req.body || {};
+
+  if (!username || !password) {
+    return res.status(400).json({ ok: false, message: 'Введіть логін і пароль.' });
   }
 
-  function init() {
-    const form = document.getElementById('admin-login-form');
-    if (form) {
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        const u = document.getElementById('login-username').value.trim();
-        const p = document.getElementById('login-password').value.trim();
-        login(u, p);
-      };
-    }
-    check();
+  const trimmedUsername = String(username).trim();
+  if (trimmedUsername.length < 3) {
+    return res.status(400).json({ ok: false, message: 'Логін має містити мінімум 3 символи.' });
   }
 
-  return { init, check, logout };
-})();
+  if (String(password).length < 6) {
+    return res.status(400).json({ ok: false, message: 'Пароль має містити мінімум 6 символів.' });
+  }
 
-document.addEventListener('DOMContentLoaded', Auth.init);
+  if (getUserByUsername(trimmedUsername)) {
+    return res.status(409).json({ ok: false, message: 'Користувач з таким логіном вже існує.' });
+  }
+
+  const newUser = {
+    id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    username: trimmedUsername,
+    passwordHash: bcrypt.hashSync(String(password), 10),
+    role: 'user'
+  };
+
+  users.push(newUser);
+
+  req.session.user = {
+    id: newUser.id,
+    username: newUser.username,
+    role: newUser.role
+  };
+
+  return res.status(201).json({
+    ok: true,
+    user: { username: newUser.username, role: newUser.role },
+    message: 'Реєстрація успішна.'
+  });
+});
+
+router.post('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.json({ ok: true, message: 'Вихід виконано.' });
+  });
+});
+
+module.exports = router;

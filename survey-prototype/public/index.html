@@ -8,43 +8,75 @@
 </head>
 <body>
   <header class="header">
-    <h1>Система електронних опитувань</h1>
-    <nav>
-      <button data-view="home" class="nav-btn active">Головна</button>
-      <button data-view="create" class="nav-btn">Конструктор</button>
-      <button data-view="list" class="nav-btn">Опитування</button>
-    </nav>
+    <div class="header-row">
+      <h1>Система електронних опитувань</h1>
+      <div class="header-actions">
+        <button data-view="home" class="nav-btn active">Головна</button>
+        <button data-view="admin" class="nav-btn admin-only">Адмін-панель</button>
+        <button data-view="create" class="nav-btn admin-only">Конструктор</button>
+        <button data-view="list" class="nav-btn">Опитування</button>
+        <button data-view="login" class="nav-btn auth-btn" id="btn-login-view">Увійти 🔐</button>
+        <button class="btn small danger auth-btn" id="btn-logout" style="display: none;">Вийти</button>
+      </div>
+    </div>
   </header>
 
   <main class="container">
-    <!-- Головна -->
     <section id="view-home" class="view active">
       <h2>Ласкаво просимо</h2>
       <p>Створюйте опитування, збирайте відповіді респондентів і переглядайте результати у вигляді статистики та діаграм.</p>
-      <button class="btn" data-view="create">Створити опитування</button>
+      <div class="home-actions">
+        <button class="btn" data-view="list">Переглянути опитування</button>
+        <button class="btn secondary admin-only" data-view="create">Створити опитування</button>
+      </div>
     </section>
-<button class="nav-btn" data-view="login" id="btn-login-view">Увійти 🔐</button>
-<button class="btn small danger" id="btn-logout" style="display: none;" onclick="Auth.logout()">Вийти</button>
-<!-- Екран авторизації адміна -->
-<div id="view-login" class="view">
-  <div class="card" style="max-width: 400px; margin: 40px auto; padding: 25px; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
-    <h2 style="margin-top: 0;">Вхід для адміністратора</h2>
-    <form id="admin-login-form">
-      <div style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 5px;">Логін:</label>
-        <input type="text" id="login-username" class="input" style="width: 100%; padding: 8px; box-sizing: border-box;" required>
-      </div>
-      <div style="margin-bottom: 15px;">
-        <label style="display: block; margin-bottom: 5px;">Пароль:</label>
-        <input type="password" id="login-password" class="input" style="width: 100%; padding: 8px; box-sizing: border-box;" required>
-      </div>
-      <div id="login-error" style="color: #dc2626; font-size: 14px; margin-bottom: 10px;"></div>
-      <button type="submit" class="btn btn-primary" style="width: 100%;">Увійти</button>
-    </form>
-  </div>
-</div>
 
-    <!-- Конструктор -->
+    <section id="view-admin" class="view admin-panel">
+      <div class="admin-header">
+        <h2>Адмін-панель</h2>
+        <button class="btn secondary" id="admin-refresh">Оновити статистику</button>
+      </div>
+      <div id="admin-summary" class="admin-summary"></div>
+      <div id="admin-surveys" class="admin-surveys"></div>
+    </section>
+
+    <section id="view-login" class="view auth-view">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" type="button" data-auth-tab="login">Вхід</button>
+          <button class="auth-tab" type="button" data-auth-tab="register">Реєстрація</button>
+        </div>
+
+        <form id="login-form" class="auth-form active">
+          <h2>Вхід в адмін-панель</h2>
+          <label>
+            Логін
+            <input id="login-username" type="text" placeholder="admin" required>
+          </label>
+          <label>
+            Пароль
+            <input id="login-password" type="password" placeholder="••••••••" required>
+          </label>
+          <div id="login-error" class="form-error"></div>
+          <button type="submit" class="btn btn-primary">Увійти</button>
+        </form>
+
+        <form id="register-form" class="auth-form">
+          <h2>Створити користувача</h2>
+          <label>
+            Логін
+            <input id="register-username" type="text" placeholder="mylogin" required>
+          </label>
+          <label>
+            Пароль
+            <input id="register-password" type="password" placeholder="мінімум 6 символів" required>
+          </label>
+          <div id="register-error" class="form-error"></div>
+          <button type="submit" class="btn secondary">Зареєструватися</button>
+        </form>
+      </div>
+    </section>
+
     <section id="view-create" class="view">
       <h2>Конструктор опитування</h2>
       <form id="survey-form">
@@ -62,13 +94,11 @@
       </form>
     </section>
 
-    <!-- Список опитувань -->
     <section id="view-list" class="view">
       <h2>Список опитувань</h2>
       <div id="survey-list"></div>
     </section>
 
-    <!-- Верифікація email -->
     <section id="view-verify" class="view">
       <h2>Перевірка доступу</h2>
       <p>Для проходження опитування введіть вашу корпоративну пошту <strong>@rshu.edu.ua</strong>.<br>
@@ -82,14 +112,12 @@
       </form>
     </section>
 
-    <!-- Проходження опитування -->
     <section id="view-take" class="view">
       <h2 id="take-title"></h2>
       <p id="take-desc"></p>
       <form id="response-form"></form>
     </section>
 
-    <!-- Результати -->
     <section id="view-results" class="view">
       <h2 id="results-title"></h2>
       <p id="results-count"></p>
@@ -105,6 +133,7 @@
   <script src="js/builder.js"></script>
   <script src="js/respondent.js"></script>
   <script src="js/analytics.js"></script>
+  <script src="js/admin.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

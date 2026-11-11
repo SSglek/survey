@@ -87,6 +87,51 @@ const Analytics = (() => {
     }
   }
 
+  async function showMyResults(surveyId) {
+    try {
+      const survey = await API.getSurvey(surveyId);
+      const responses = await API.getMyResponses(surveyId);
+
+      currentSurveyId = surveyId;
+      currentSurvey = survey;
+      currentResponses = responses;
+
+      document.getElementById('results-title').textContent = 'Мої відповіді: ' + survey.title;
+      document.getElementById('results-count').textContent = `Кількість моїх відповідей: ${responses.length}`;
+
+      const container = document.getElementById('results-container');
+      container.innerHTML = '';
+
+      if (responses.length === 0) {
+        container.innerHTML = '<p>Ви ще не відповідали на це опитування.</p>';
+        App.showView('results');
+        return;
+      }
+
+      responses.forEach((response, idx) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'result-question';
+        wrapper.innerHTML = `<h3>Відповідь ${idx + 1} · ${new Date(response.submitted_at).toLocaleString('uk-UA')}</h3>`;
+
+        survey.questions.forEach((q, qIdx) => {
+          const answer = response.answers[q.id] !== undefined ? response.answers[q.id] : response.answers[q.ref];
+          const answerText = Array.isArray(answer) ? answer.join(', ') : (answer ?? '—');
+
+          const row = document.createElement('div');
+          row.className = 'my-result-row';
+          row.innerHTML = `<strong>${qIdx + 1}. ${escapeHtml(q.text)}</strong><br><span>${escapeHtml(String(answerText))}</span>`;
+          wrapper.appendChild(row);
+        });
+
+        container.appendChild(wrapper);
+      });
+
+      App.showView('results');
+    } catch (err) {
+      alert('Не вдалося завантажити ваші відповіді: ' + err.message);
+    }
+  }
+
   function countValues(values) {
     return values.reduce((acc, v) => {
       if (v !== undefined && v !== null) {
@@ -145,5 +190,5 @@ const Analytics = (() => {
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  return { show, exportCSV };
+  return { show, showMyResults, exportCSV };
 })();
