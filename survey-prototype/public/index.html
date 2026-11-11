@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Прототип системи електронних опитувань</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header">
+    <h1>Система електронних опитувань</h1>
+    <nav>
+      <button data-view="home" class="nav-btn active">Головна</button>
+      <button data-view="create" class="nav-btn">Конструктор</button>
+      <button data-view="list" class="nav-btn">Опитування</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Головна -->
+    <section id="view-home" class="view active">
+      <h2>Ласкаво просимо</h2>
+      <p>Створюйте опитування, збирайте відповіді респондентів і переглядайте результати у вигляді статистики та діаграм.</p>
+      <button class="btn" data-view="create">Створити опитування</button>
+    </section>
+
+    <!-- Конструктор -->
+    <section id="view-create" class="view">
+      <h2>Конструктор опитування</h2>
+      <form id="survey-form">
+        <label>Назва опитування
+          <input type="text" id="survey-title" required>
+        </label>
+        <label>Опис
+          <textarea id="survey-desc" rows="2"></textarea>
+        </label>
+        <div id="questions-container"></div>
+        <div class="builder-actions">
+          <button type="button" class="btn secondary" id="add-question">+ Додати питання</button>
+        </div>
+        <button type="submit" class="btn">Зберегти опитування</button>
+      </form>
+    </section>
+
+    <!-- Список опитувань -->
+    <section id="view-list" class="view">
+      <h2>Список опитувань</h2>
+      <div id="survey-list"></div>
+    </section>
+
+    <!-- Верифікація email -->
+    <section id="view-verify" class="view">
+      <h2>Перевірка доступу</h2>
+      <p>Для проходження опитування введіть вашу корпоративну пошту <strong>@rshu.edu.ua</strong>.<br>
+         Email <strong>не зберігається</strong> — система зберігає лише анонімний хеш для перевірки повторного проходження.</p>
+      <form id="verify-form">
+        <label>Корпоративна пошта РДГУ
+          <input type="email" id="verify-email" placeholder="petryk.ivan.ipz@rshu.edu.ua" required>
+        </label>
+        <div id="verify-error" class="msg err" style="display:none"></div>
+        <button type="submit" class="btn">Продовжити</button>
+      </form>
+    </section>
+
+    <!-- Проходження опитування -->
+    <section id="view-take" class="view">
+      <h2 id="take-title"></h2>
+      <p id="take-desc"></p>
+      <form id="response-form"></form>
+    </section>
+
+    <!-- Результати -->
+    <section id="view-results" class="view">
+      <h2 id="results-title"></h2>
+      <p id="results-count"></p>
+      <div id="results-container"></div>
+      <button class="btn secondary" id="export-csv">Експорт у CSV</button>
+    </section>
+  </main>
+
+  <footer class="footer">Усі права належать чинному уряду ІПЗ-41 · 2026</footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/verify.js"></script>
+  <script src="js/builder.js"></script>
+  <script src="js/respondent.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
