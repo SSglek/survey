@@ -25,6 +25,35 @@ const App = (() => {
         list.innerHTML = '<p>Опитувань ще немає. Створіть перше у конструкторі.</p>';
         return;
       }
+// Перевірка авторизації при завантаженні
+async function checkAuth() {
+  const res = await fetch('/api/auth/status');
+  const data = await res.json();
+  
+  // Якщо не адмін — приховуємо Конструктор та кнопки редагування/видалення
+  const createBtn = document.querySelector('[data-view="create"]');
+  if (createBtn) createBtn.style.display = data.isAdmin ? 'inline-block' : 'none';
+}
+
+// Обробка форми логіну
+document.getElementById('admin-login-form')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await res.json();
+  if (data.ok) {
+    location.reload();
+  } else {
+    document.getElementById('login-error').textContent = data.message;
+  }
+});
 
       surveys.forEach(s => {
         const card = document.createElement('div');

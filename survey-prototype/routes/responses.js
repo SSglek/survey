@@ -27,8 +27,8 @@ router.post('/', (req, res) => {
   // Транзакція: відповідь + хеш зберігаються разом або не зберігаються взагалі
   db.transaction(() => {
     db.prepare(
-      'INSERT INTO responses (id, survey_id, answers, voter_hash) VALUES (?, ?, ?, ?)'
-    ).run(genId(), surveyId, JSON.stringify(answers), voterHash);
+      'INSERT INTO responses (id, survey_id, answers, voter_hash, source) VALUES (?, ?, ?, ?, ?)'
+    ).run(genId(), surveyId, JSON.stringify(answers), voterHash, 'site');
 
     db.prepare(
       'INSERT INTO used_hashes (hash, survey_id) VALUES (?, ?)'

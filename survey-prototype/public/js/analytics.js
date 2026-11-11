@@ -34,15 +34,21 @@ const Analytics = (() => {
         block.className = 'result-question';
         block.innerHTML = `<h3>${idx + 1}. ${escapeHtml(q.text)}</h3>`;
 
-        if (q.type === 'text') {
-          const texts = responses.map(r => r.answers[q.id]).filter(Boolean);
+        // Отримуємо значення відповіді для даного питання (шукаємо за id або за ref)
+        const getAnswerValue = (r) => {
+          if (!r.answers) return undefined;
+          return r.answers[q.id] !== undefined ? r.answers[q.id] : r.answers[q.ref];
+        };
+
+        if (q.type === 'text' || q.type === 'long_text') {
+          const texts = responses.map(getAnswerValue).filter(Boolean);
           block.innerHTML += texts.length
             ? '<ul>' + texts.map(t => `<li>${escapeHtml(t)}</li>`).join('') + '</ul>'
             : '<p>Відповідей немає.</p>';
 
-        } else if (q.type === 'scale') {
+        } else if (q.type === 'scale' || q.type === 'opinion_scale') {
           const values = responses
-            .map(r => Number(r.answers[q.id]))
+            .map(r => Number(getAnswerValue(r)))
             .filter(v => !isNaN(v) && v > 0);
           const avg = values.length
             ? (values.reduce((a, b) => a + b, 0) / values.length)
@@ -54,13 +60,22 @@ const Analytics = (() => {
           );
 
         } else {
+          // Для питань типу single_choice та multiple_choice
           const values = [];
           responses.forEach(r => {
-            const a = r.answers[q.id];
-            if (Array.isArray(a)) values.push(...a);
-            else if (a !== null && a !== undefined) values.push(a);
+            const a = getAnswerValue(r);
+            if (Array.isArray(a)) {
+              values.push(...a); // Якщо це масив вибраних варіантів від Typeform
+            } else if (a !== null && a !== undefined) {
+              values.push(a);
+            }
           });
-          block.appendChild(buildBars(countValues(values), responses.length, q.options));
+
+          // Збираємо список усіх можливих options (із локального конструктора або динамічно з Typeform)
+          const counts = countValues(values);
+          const dynamicOptions = Array.from(new Set([...(q.options || []), ...Object.keys(counts)]));
+
+          block.appendChild(buildBars(counts, responses.length, dynamicOptions));
         }
 
         container.appendChild(block);
@@ -73,12 +88,17 @@ const Analytics = (() => {
   }
 
   function countValues(values) {
-    return values.reduce((acc, v) => { acc[v] = (acc[v] || 0) + 1; return acc; }, {});
+    return values.reduce((acc, v) => {
+      if (v !== undefined && v !== null) {
+        acc[v] = (acc[v] || 0) + 1;
+      }
+      return acc;
+    }, {});
   }
 
   function buildBars(counts, total, order) {
     const wrap = document.createElement('div');
-    order.forEach(opt => {
+    (order || []).forEach(opt => {
       const c   = counts[opt] || 0;
       const pct = total ? Math.round((c / total) * 100) : 0;
       const row = document.createElement('div');
@@ -102,7 +122,7 @@ const Analytics = (() => {
       r.id,
       r.submitted_at,
       ...survey.questions.map(q => {
-        const a = r.answers[q.id];
+        const a = r.answers[q.id] !== undefined ? r.answers[q.id] : r.answers[q.ref];
         return Array.isArray(a) ? a.join('; ') : (a ?? '');
       })
     ]);
@@ -111,7 +131,7 @@ const Analytics = (() => {
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
       .join('\n');
 
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href     = URL.createObjectURL(blob);
     link.download = `${survey.title}.csv`;

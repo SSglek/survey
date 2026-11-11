@@ -1,103 +1,94 @@
 const express = require('express');
-const router  = express.Router();
-const db      = require('../db/database');
+const router = express.Router();
+const db = require('../db/database');
+const crypto = require('crypto');
 
+// Генератор ID для запису в БД
 function genId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  return crypto.randomBytes(8).toString('hex');
 }
 
-// ─────────────────────────────────────────────
-// POST /api/webhook/typeform
-// Typeform надсилає сюди відповідь автоматично
-// ─────────────────────────────────────────────
+// Обробка webhook від Typeform
 router.post('/typeform', (req, res) => {
   try {
     const payload = req.body;
 
-    // Typeform передає відповіді у form_response.answers
-    const formId  = payload?.form_response?.form_id;
-    const answers = {};
-
-    if (!formId) {
-      return res.status(400).json({ error: 'Невірний формат Typeform payload' });
+    // Перевіряємо, чи це повноцінна відповідь на форму
+    if (!payload.form_response) {
+      return res.status(200).json({ ok: true, message: 'Event ignored (not a form_response)' });
     }
 
-    payload.form_response.answers.forEach(a => {
-      const key = a.field.ref;   // ref = назва поля з Typeform
-      // Typeform може передавати різні типи відповідей
-      answers[key] =
-        a.text           ??   // текстова відповідь
-        a.choice?.label  ??   // один варіант
-        a.choices?.labels ??  // кілька варіантів
-        a.number          ??  // число / шкала
-        a.boolean         ??  // так/ні
-        null;
-    });
+    const formId = payload.form_response.form_id; // "kplWf8d6"
+    const rawAnswers = payload.form_response.answers || [];
 
-    // Знайти опитування в нашій БД за зовнішнім id Typeform
-    // (треба заздалегідь прив'язати — дивись Крок 3)
-    const survey = db.prepare(
-      'SELECT id FROM surveys WHERE external_id = ?'
-    ).get(formId);
+    // Шукаємо прив'язане опитування за external_id
+    const survey = db.prepare('SELECT id FROM surveys WHERE external_id = ?').get(formId);
 
     if (!survey) {
-      // Якщо опитування не прив'язане — зберігаємо з formId як survey_id
-      // Можна потім прив'язати вручну через адмін-панель
-      console.log(`⚠️  Typeform form_id ${formId} не прив'язаний до опитування`);
-      return res.sendStatus(200); // Typeform чекає 200, інакше буде повторювати
+      console.warn(`[Typeform Webhook] Опитування з external_id='${formId}' не знайдено в БД.`);
+      return res.status(404).json({ error: 'Survey not found for this external_id' });
     }
 
+    const parsedAnswers = {};
+
+    // Парсимо кожен тип відповіді відповідно до payload
+    rawAnswers.forEach(a => {
+      const key = a.field.ref || a.field.id;
+
+      if (a.type === 'number') {
+        // Оціночна шкала (1-5)
+        parsedAnswers[key] = a.number;
+      } else if (a.type === 'text') {
+        // Текстові відповіді (long_text)
+        parsedAnswers[key] = a.text;
+      } else if (a.type === 'choice') {
+        // Один варіант вибору
+        parsedAnswers[key] = a.choice.label;
+      } else if (a.type === 'choices') {
+        // Кілька варіантів вибору (зберігаємо масивом або через кому)
+        parsedAnswers[key] = a.choices.labels;
+      }
+    });
+
+    // Зберігаємо відповідь у базу SQLite
+    const responseId = genId();
+    const voterHash = 'typeform_' + (payload.form_response.token || genId());
+
     db.prepare(`
-      INSERT INTO responses (id, survey_id, answers, voter_hash)
-      VALUES (?, ?, ?, ?)
-    `).run(
-      genId(),
-      survey.id,
-      JSON.stringify(answers),
-      'typeform-webhook'   // немає email → ставимо мітку джерела
-    );
+      INSERT INTO responses (id, survey_id, answers, voter_hash , source)
+      VALUES (?, ?, ?, ?, 'typeform')
+    `).run(responseId, survey.id, JSON.stringify(parsedAnswers), voterHash);
 
-    console.log(`✅  Typeform відповідь збережена для опитування ${survey.id}`);
-    res.sendStatus(200);
-
+    console.log(`[Typeform Webhook] Успішно збережено відповідь ID: ${responseId} для опитування: ${survey.id}`);
+    
+    return res.status(200).json({ ok: true, responseId });
   } catch (err) {
-    console.error('Webhook error:', err);
-    res.sendStatus(500);
+    console.error('[Typeform Webhook Error]:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ─────────────────────────────────────────────
-// POST /api/webhook/google
-// Google Forms → Apps Script → сюди
-// ─────────────────────────────────────────────
+// Обробка webhook від Google Forms (Apps Script)
 router.post('/google', (req, res) => {
   try {
     const { formId, answers } = req.body;
 
-    if (!formId || !answers) {
-      return res.status(400).json({ error: 'Невірний формат' });
-    }
-
-    const survey = db.prepare(
-      'SELECT id FROM surveys WHERE external_id = ?'
-    ).get(formId);
+    const survey = db.prepare('SELECT id FROM surveys WHERE external_id = ?').get(formId);
 
     if (!survey) {
-      console.log(`⚠️  Google form_id ${formId} не прив'язаний до опитування`);
-      return res.sendStatus(200);
+      return res.status(404).json({ error: 'Survey not found' });
     }
 
+    const responseId = genId();
     db.prepare(`
       INSERT INTO responses (id, survey_id, answers, voter_hash)
       VALUES (?, ?, ?, ?)
-    `).run(genId(), survey.id, JSON.stringify(answers), 'google-webhook');
+    `).run(responseId, survey.id, JSON.stringify(answers), 'google_forms_' + genId());
 
-    console.log(`✅  Google Forms відповідь збережена для опитування ${survey.id}`);
-    res.sendStatus(200);
-
+    return res.status(200).json({ ok: true });
   } catch (err) {
-    console.error('Webhook error:', err);
-    res.sendStatus(500);
+    console.error('[Google Webhook Error]:', err);
+    return res.status(500).json({ error: 'Server error' });
   }
 });
 

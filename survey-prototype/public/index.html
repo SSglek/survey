@@ -23,6 +23,26 @@
       <p>Створюйте опитування, збирайте відповіді респондентів і переглядайте результати у вигляді статистики та діаграм.</p>
       <button class="btn" data-view="create">Створити опитування</button>
     </section>
+<button class="nav-btn" data-view="login" id="btn-login-view">Увійти 🔐</button>
+<button class="btn small danger" id="btn-logout" style="display: none;" onclick="Auth.logout()">Вийти</button>
+<!-- Екран авторизації адміна -->
+<div id="view-login" class="view">
+  <div class="card" style="max-width: 400px; margin: 40px auto; padding: 25px; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
+    <h2 style="margin-top: 0;">Вхід для адміністратора</h2>
+    <form id="admin-login-form">
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px;">Логін:</label>
+        <input type="text" id="login-username" class="input" style="width: 100%; padding: 8px; box-sizing: border-box;" required>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="display: block; margin-bottom: 5px;">Пароль:</label>
+        <input type="password" id="login-password" class="input" style="width: 100%; padding: 8px; box-sizing: border-box;" required>
+      </div>
+      <div id="login-error" style="color: #dc2626; font-size: 14px; margin-bottom: 10px;"></div>
+      <button type="submit" class="btn btn-primary" style="width: 100%;">Увійти</button>
+    </form>
+  </div>
+</div>
 
     <!-- Конструктор -->
     <section id="view-create" class="view">
