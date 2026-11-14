@@ -34,10 +34,6 @@ const App = (() => {
       btn.style.display = isAdmin ? '' : 'none';
     });
 
-    document.querySelectorAll('.auth-btn').forEach(btn => {
-      btn.style.display = isAuth ? '' : '';
-    });
-
     document.querySelectorAll('[data-action="my-results"]').forEach(btn => {
       btn.style.display = isAuth && !isAdmin ? '' : 'none';
     });
@@ -148,7 +144,7 @@ const App = (() => {
       showView('create');
     }
     if (action === 'delete') {
-      if (confirm('Видалити опитування разим із відповідями?')) {
+      if (confirm('Видалити опитування разом із відповідями?')) {
         try {
           await API.deleteSurvey(id);
           renderList();

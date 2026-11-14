@@ -1,7 +1,14 @@
 * { box-sizing: border-box; }
 
-body {
+/* Фікс висоти екрана для правильного притискання футера */
+html, body {
+  height: 100%;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body {
   font-family: Arial, Helvetica, sans-serif;
   background: #f4f6fb;
   color: #222;
@@ -28,24 +35,17 @@ body {
 
 .nav-btn.active, .nav-btn:hover { background: #fff; color: #2c3e7a; }
 
+/* Розтягуємо контейнер контенту на весь вільний простір */
 .container {
   max-width: 900px;
   margin: 24px auto;
   padding: 0 16px;
-  min-height: 70vh;
+  flex: 1;
+  width: 100%;
 }
 
 .view { display: none; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
 .view.active { display: block; }
-
-input[type="text"], input[type="email"], textarea, select {
-  width: 100%;
-  padding: 8px;
-  margin: 4px 0 12px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 14px;
-}
 
 input[type="password"], input[type="text"], input[type="email"], textarea, select {
   width: 100%;
@@ -128,7 +128,16 @@ label { display: block; font-weight: bold; margin-bottom: 4px; }
 
 .spinner { display: inline-block; margin-left: 8px; }
 
-.footer { text-align: center; color: #777; font-size: 13px; padding: 16px; }
+/* Фіксований нижній футер */
+.footer { 
+  text-align: center; 
+  color: #777; 
+  font-size: 13px; 
+  padding: 16px; 
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  margin-top: auto; 
+}
 
 /* Верифікація */
 #view-verify p { background: #eef1fa; border-left: 4px solid #2c3e7a; padding: 12px; border-radius: 4px; margin-bottom: 16px; }
@@ -205,69 +214,6 @@ label { display: block; font-weight: bold; margin-bottom: 4px; }
   margin: 8px 0 12px;
   color: #b91c1c;
   font-size: 13px;
-}
-
-input[type="password"], input[type="text"], input[type="email"], textarea, select {
-  width: 100%;
-  padding: 10px 12px;
-  margin: 6px 0 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.2s ease;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: #2c3e7a;
-  box-shadow: 0 0 0 3px rgba(44, 62, 122, 0.12);
-}
-
-.btn {
-  background: #2c3e7a;
-  color: #fff;
-  border: none;
-  padding: 10px 18px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  margin-top: 8px;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.btn:hover {
-  opacity: 0.96;
-  transform: translateY(-1px);
-}
-
-.btn.secondary {
-  background: #7a8ab8;
-}
-
-.btn.small {
-  padding: 6px 10px;
-  font-size: 12px;
-  margin: 0;
-}
-
-.btn.danger {
-  background: #c0392b;
-}
-
-.nav-btn {
-  background: transparent;
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.7);
-  border-radius: 8px;
-  padding: 8px 14px;
-  margin-right: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-btn.active, .nav-btn:hover {
-  background: #fff;
-  color: #2c3e7a;
 }
 
 .admin-header {

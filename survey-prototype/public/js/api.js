@@ -20,6 +20,7 @@ const API = (() => {
 
     return data;
   }
+  
 
   return {
     // Опитування
@@ -41,6 +42,9 @@ const API = (() => {
     getAuthStatus: ()           => request('GET',    '/auth/status'),
     login:         (data)       => request('POST',   '/auth/login', data),
     register:      (data)       => request('POST',   '/auth/register', data),
-    logout:        ()           => request('POST',   '/auth/logout')
+    logout:        ()           => request('POST',   '/auth/logout'),
+
+    // Користувачі
+    deleteUser:    (userId)     => request('DELETE', `/users/${userId}`)
   };
 })();
