@@ -4,6 +4,15 @@ const Respondent = (() => {
   let _pendingSurveyId = null;
   let _pendingSurvey   = null;  // кешуємо об'єкт щоб не робити зайвий запит
 
+  function isRshuDomainUser(user) {
+    return !!(user && typeof user.username === 'string' && user.username.toLowerCase().endsWith('@rshu.edu.ua'));
+  }
+
+  function isTypeformSurvey(survey) {
+    if (!survey) return false;
+    return !!survey.external_id || /typeform/i.test(String(survey.title || ''));
+  }
+
   // Крок 1: відкрити форму верифікації
   async function openWithVerify(surveyId) {
     try {
@@ -12,6 +21,42 @@ const Respondent = (() => {
       _pendingHash     = null;
     } catch (e) {
       alert('Опитування не знайдено: ' + e.message);
+      return;
+    }
+
+    const authState = await App.checkAuth();
+    const isTypeform = isTypeformSurvey(_pendingSurvey);
+
+    if (authState.isAuthenticated && authState.isAdmin) {
+      openSurveyForm();
+      return;
+    }
+
+    if (authState.isAuthenticated) {
+      try {
+        const approved = await API.checkAccessRequest(surveyId);
+        if (approved && approved.approved) {
+          openSurveyForm();
+          return;
+        }
+      } catch (err) {
+        console.warn('Не вдалося перевірити заявку на доступ:', err);
+      }
+    }
+
+    // Для не-Typeform опитувань: якщо користувач увійшов з корпоративної пошти @rshu.edu.ua — пропускаємо верифікацію.
+    // Якщо не увійшов або увійшов з іншої пошти — просимо увійти під корпоративною поштою або звернутися до адміністратора.
+    if (!isTypeform) {
+      if (authState.isAuthenticated && isRshuDomainUser(authState.user)) {
+        openSurveyForm();
+        return;
+      }
+
+      const loginErr = document.getElementById('login-error');
+      if (loginErr) {
+        loginErr.textContent = 'Для проходження цього опитування увійдіть під корпоративною поштою @rshu.edu.ua або попросіть дозвіл у адміністратора.';
+      }
+      App.showView('login');
       return;
     }
 
@@ -139,14 +184,76 @@ const Respondent = (() => {
     }
   }
 
+  // Крок 5: надіслати запит на доступ до опитування
+  async function handleAccessRequest(e) {
+    e.preventDefault();
+    const form = e.target;
+    const messageEl = document.getElementById('access-request-message');
+    const statusEl = document.getElementById('access-request-status');
+    const btn = form.querySelector('button[type="submit"]');
+
+    if (!messageEl || !statusEl || !btn) return;
+
+    const message = messageEl.value.trim();
+
+    if (!message) {
+      statusEl.textContent = 'Введіть текст запиту для адміністратора.';
+      statusEl.style.display = 'block';
+      return;
+    }
+
+    const authState = await App.checkAuth();
+    if (!authState.isAuthenticated) {
+      const loginErr = document.getElementById('login-error');
+      if (loginErr) {
+        loginErr.textContent = 'Спочатку увійдіть в систему, щоб попросити дозвіл у адміністратора.';
+      }
+      App.showView('login');
+      return;
+    }
+
+    const email = authState.user && authState.user.username ? authState.user.username : '';
+
+    btn.disabled = true;
+    btn.textContent = 'Надсилання...';
+    statusEl.style.display = 'none';
+
+    try {
+      const result = await API.requestAccess({
+        surveyId: _pendingSurveyId,
+        email,
+        message
+      });
+
+      statusEl.textContent = result.message || 'Очікуйте на рішення адміністратора';
+      statusEl.classList.remove('msg err');
+      statusEl.classList.add('msg', 'ok');
+      statusEl.style.display = 'block';
+      form.reset();
+    } catch (err) {
+      statusEl.textContent = err.message;
+      statusEl.classList.remove('msg ok');
+      statusEl.classList.add('msg', 'err');
+      statusEl.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Попросити дозвіл у адміністратора';
+    }
+  }
+
   function escapeHtml(str) {
     return String(str ?? '')
       .replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  function escapeAttr(str) {
+    return escapeHtml(str).replace(/'/g, '&#39;');
+  }
+
   function init() {
     document.getElementById('verify-form').addEventListener('submit', handleVerify);
+    document.getElementById('access-request-form')?.addEventListener('submit', handleAccessRequest);
   }
 
   return { openWithVerify, init };

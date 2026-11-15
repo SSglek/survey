@@ -22,6 +22,16 @@ db.exec(`
     created_at  TEXT DEFAULT (datetime('now'))
   );
 
+  -- Запити на доступ
+  CREATE TABLE IF NOT EXISTS access_requests (
+    id         TEXT PRIMARY KEY,
+    survey_id  TEXT NOT NULL,
+    user_email TEXT NOT NULL,
+    message    TEXT NOT NULL,
+    status     TEXT DEFAULT 'pending',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
   -- Відповіді респондентів
   CREATE TABLE IF NOT EXISTS responses (
     id           TEXT PRIMARY KEY,

@@ -33,6 +33,7 @@ app.use('/api/auth',      require('./routes/auth'));
 app.use('/api/surveys',   require('./routes/surveys'));
 app.use('/api/responses', require('./routes/responses'));
 app.use('/api/verify',    require('./routes/verify'));
+app.use('/api/access-requests', require('./routes/access-requests'));
 // webhook для шлюзу
 app.use('/api/webhook',   require('./routes/webhook'));
 

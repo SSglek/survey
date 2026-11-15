@@ -37,6 +37,10 @@ const API = (() => {
 
     // Верифікація email
     verify:        (data)       => request('POST',   '/verify', data),
+    requestAccess: (data)       => request('POST',   '/access-requests', data),
+    getAccessRequests: ()       => request('GET',    '/access-requests'),
+    checkAccessRequest: (surveyId) => request('GET', `/access-requests/check/${surveyId}`),
+    updateAccessRequestStatus: (id, status) => request('PATCH', `/access-requests/${id}/status`, { status }),
 
     // Авторизація
     getAuthStatus: ()           => request('GET',    '/auth/status'),

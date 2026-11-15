@@ -101,14 +101,23 @@
 
     <section id="view-verify" class="view">
       <h2>Перевірка доступу</h2>
-      <p>Для проходження опитування введіть вашу корпоративну пошту <strong>@rshu.edu.ua</strong>.<br>
-         Email <strong>не зберігається</strong> — система зберігає лише анонімний хеш для перевірки повторного проходження.</p>
+      <p>Для проходження опитування на платформі Typeform потрібно ввести корпоративну пошту <strong>@rshu.edu.ua</strong>.<br>
+         Для інших опитувань доступ відкривається автоматично для користувачів, які увійшли під корпоративною поштою <strong>@rshu.edu.ua</strong>.<br>
+         Якщо ви увійшли під іншою поштою — залогіньтеся під корпоративною поштою <strong>@rshu.edu.ua</strong> або попросіть дозвіл у адміністратора.</p>
       <form id="verify-form">
         <label>Корпоративна пошта РДГУ
           <input type="email" id="verify-email" placeholder="petryk.ivan.ipz@rshu.edu.ua" required>
         </label>
         <div id="verify-error" class="msg err" style="display:none"></div>
         <button type="submit" class="btn">Продовжити</button>
+      </form>
+
+      <form id="access-request-form" style="margin-top: 20px;">
+        <label>Попросити дозвіл у адміністратора
+          <textarea id="access-request-message" rows="4" placeholder="Наприклад: я вчитель/студент, прошу дозвіл на проходження цього опитування..." required></textarea>
+        </label>
+        <div id="access-request-status" class="msg ok" style="display:none"></div>
+        <button type="submit" class="btn secondary">Попросити дозвіл у адміністратора</button>
       </form>
     </section>
 
